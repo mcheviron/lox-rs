@@ -1,33 +1,116 @@
-use std::env;
+use clap::{Parser, Subcommand};
 use std::fs;
+use std::path::PathBuf;
+use thiserror::Error;
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
-        eprintln!("Usage: {} tokenize <filename>", args[0]);
-        return;
-    }
+mod lexeme;
+use lexeme::Lexeme;
 
-    let command = &args[1];
-    let filename = &args[2];
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
 
-    match command.as_str() {
-        "tokenize" => {
-            eprintln!("Logs from your program will appear here!");
+#[derive(Subcommand)]
+enum Commands {
+    Tokenize {
+        #[arg(value_name = "FILE")]
+        file: PathBuf,
+    },
+}
 
-            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
-                eprintln!("Failed to read file {}", filename);
-                String::new()
-            });
+#[derive(Error, Debug)]
+enum AppError {
+    #[error("Failed to read file: {0}")]
+    FileReadError(#[from] std::io::Error),
+    #[error("Unexpected character: {0}")]
+    UnexpectedCharacter(char),
+}
 
-            if !file_contents.is_empty() {
-                panic!("Scanner not implemented");
-            } else {
-                println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
+fn main() -> Result<(), AppError> {
+    let cli = Cli::parse();
+
+    match &cli.command {
+        Commands::Tokenize { file } => {
+            eprintln!("Tokenizing file: {:?}", file);
+
+            let file_contents = fs::read_to_string(file).map_err(AppError::FileReadError)?;
+
+            let tokens = tokenize(&file_contents)?;
+
+            for token in tokens {
+                println!("{}", token);
             }
         }
-        _ => {
-            eprintln!("Unknown command: {}", command);
+    }
+
+    Ok(())
+}
+fn tokenize(input: &str) -> Result<Vec<Lexeme>, AppError> {
+    let mut tokens = Vec::new();
+    let mut chars = input.chars().peekable();
+
+    while let Some(&c) = chars.peek() {
+        match c {
+            ' ' | '\t' | '\n' | '\r' => {
+                chars.next();
+            }
+            '(' => {
+                tokens.push(Lexeme::LeftParen);
+                chars.next();
+            }
+            ')' => {
+                tokens.push(Lexeme::RightParen);
+                chars.next();
+            }
+            '0'..='9' => {
+                let mut number = String::new();
+                while let Some(&d) = chars.peek() {
+                    if d.is_ascii_digit() || d == '.' {
+                        number.push(d);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+                tokens.push(Lexeme::Number(number.parse().unwrap()));
+            }
+            'a'..='z' | 'A'..='Z' | '_' => {
+                let mut identifier = String::new();
+                while let Some(&d) = chars.peek() {
+                    if d.is_alphanumeric() || d == '_' {
+                        identifier.push(d);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+                tokens.push(Lexeme::Identifier(identifier));
+            }
+            '"' => {
+                chars.next();
+                let mut string = String::new();
+                while let Some(&d) = chars.peek() {
+                    if d == '"' {
+                        chars.next();
+                        break;
+                    } else {
+                        string.push(d);
+                        chars.next();
+                    }
+                }
+                tokens.push(Lexeme::String(string));
+            }
+            '+' | '-' | '*' | '/' => {
+                tokens.push(Lexeme::Operator(c.to_string()));
+                chars.next();
+            }
+            _ => return Err(AppError::UnexpectedCharacter(c)),
         }
     }
+
+    tokens.push(Lexeme::Eof);
+    Ok(tokens)
 }
