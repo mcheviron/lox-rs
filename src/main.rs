@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 mod lexeme;
-use lexeme::Lexeme;
+use lexeme::{Lexeme, MathOp};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -73,6 +73,18 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, AppError> {
                 tokens.push(Lexeme::RightBrace);
                 chars.next();
             }
+            ',' => {
+                tokens.push(Lexeme::Comma);
+                chars.next();
+            }
+            '.' => {
+                tokens.push(Lexeme::Dot);
+                chars.next();
+            }
+            ';' => {
+                tokens.push(Lexeme::Semicolon);
+                chars.next();
+            }
             '0'..='9' => {
                 let mut number = String::new();
                 while let Some(&d) = chars.peek() {
@@ -95,7 +107,16 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, AppError> {
                         break;
                     }
                 }
-                tokens.push(Lexeme::Identifier(identifier));
+                if [
+                    "and", "class", "else", "false", "for", "fun", "if", "let", "nil", "or",
+                    "return", "super", "this", "true", "var", "while",
+                ]
+                .contains(&identifier.as_str())
+                {
+                    tokens.push(Lexeme::Keyword(identifier));
+                } else {
+                    tokens.push(Lexeme::Identifier(identifier));
+                }
             }
             '"' => {
                 chars.next();
@@ -111,9 +132,38 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, AppError> {
                 }
                 tokens.push(Lexeme::String(string));
             }
-            '+' | '-' | '*' | '/' => {
-                tokens.push(Lexeme::Operator(c.to_string()));
+
+            '+' => {
+                tokens.push(Lexeme::Operator(MathOp::Plus));
                 chars.next();
+            }
+            '-' => {
+                tokens.push(Lexeme::Operator(MathOp::Minus));
+                chars.next();
+            }
+            '*' => {
+                tokens.push(Lexeme::Operator(MathOp::Star));
+                chars.next();
+            }
+            '/' => {
+                if let Some('/') = chars.clone().nth(1) {
+                    // This is a comment
+                    chars.next(); // Consume the first '/'
+                    chars.next(); // Consume the second '/'
+                    let mut comment = String::new();
+                    while let Some(&d) = chars.peek() {
+                        if d == '\n' {
+                            break;
+                        } else {
+                            comment.push(d);
+                            chars.next();
+                        }
+                    }
+                    tokens.push(Lexeme::Comment(comment));
+                } else {
+                    tokens.push(Lexeme::Operator(MathOp::Slash));
+                    chars.next();
+                }
             }
             _ => return Err(AppError::UnexpectedCharacter(c)),
         }
