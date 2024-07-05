@@ -33,6 +33,7 @@ pub enum Lexeme {
     Comma,
     Dot,
     Semicolon,
+    Error(usize, char),
 }
 
 impl fmt::Display for Lexeme {
@@ -52,6 +53,7 @@ impl fmt::Display for Lexeme {
             Lexeme::Comma => write!(f, "COMMA , null"),
             Lexeme::Dot => write!(f, "DOT . null"),
             Lexeme::Semicolon => write!(f, "SEMICOLON ; null"),
+            Lexeme::Error(line, ch) => write!(f, "[line {}] Error: Unexpected character: {}", line, ch),
         }
     }
 }
