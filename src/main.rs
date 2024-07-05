@@ -65,6 +65,14 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, AppError> {
                 tokens.push(Lexeme::RightParen);
                 chars.next();
             }
+            '{' => {
+                tokens.push(Lexeme::LeftBrace);
+                chars.next();
+            }
+            '}' => {
+                tokens.push(Lexeme::RightBrace);
+                chars.next();
+            }
             '0'..='9' => {
                 let mut number = String::new();
                 while let Some(&d) = chars.peek() {

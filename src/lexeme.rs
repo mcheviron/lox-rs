@@ -10,6 +10,8 @@ pub enum Lexeme {
     Comment(String),
     LeftParen,
     RightParen,
+    LeftBrace,
+    RightBrace,
 }
 
 impl fmt::Display for Lexeme {
@@ -24,6 +26,8 @@ impl fmt::Display for Lexeme {
             Lexeme::Comment(c) => write!(f, "COMMENT {} null", c),
             Lexeme::LeftParen => write!(f, "LEFT_PAREN ( null"),
             Lexeme::RightParen => write!(f, "RIGHT_PAREN ) null"),
+            Lexeme::LeftBrace => write!(f, "LEFT_BRACE {{ null"),
+            Lexeme::RightBrace => write!(f, "RIGHT_BRACE }} null"),
         }
     }
 }
