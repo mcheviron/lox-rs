@@ -138,15 +138,34 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, Vec<Lexeme>> {
             }
             '0'..='9' => {
                 let mut number = String::new();
+                let mut has_decimal = false;
                 while let Some(&d) = chars.peek() {
-                    if d.is_ascii_digit() || d == '.' {
+                    if d.is_ascii_digit() {
                         number.push(d);
                         chars.next();
+                    } else if d == '.' && !has_decimal {
+                        if chars
+                            .clone()
+                            .nth(1)
+                            .map_or(false, |next| next.is_ascii_digit())
+                        {
+                            number.push(d);
+                            has_decimal = true;
+                            chars.next();
+                        } else {
+                            break;
+                        }
                     } else {
                         break;
                     }
                 }
+
                 tokens.push(Lexeme::Number(number.parse().unwrap()));
+
+                if let Some(&'.') = chars.peek() {
+                    tokens.push(Lexeme::Dot);
+                    chars.next();
+                }
             }
             'a'..='z' | 'A'..='Z' | '_' => {
                 let mut identifier = String::new();

@@ -50,7 +50,13 @@ impl fmt::Display for Lexeme {
         match self {
             Lexeme::Eof => write!(f, "EOF  null"),
             Lexeme::Identifier(s) => write!(f, "IDENTIFIER {} null", s),
-            Lexeme::Number(n) => write!(f, "NUMBER {} {}", n, n),
+            Lexeme::Number(n) => {
+                if n.fract() == 0.0 {
+                    write!(f, "NUMBER {} {:.1}", n, n)
+                } else {
+                    write!(f, "NUMBER {} {}", n, n)
+                }
+            }
             Lexeme::String(s) => write!(f, "STRING \"{}\" {}", s, s),
             Lexeme::Operator(op) => write!(f, "{} null", op),
             Lexeme::Keyword(kw) => write!(f, "KEYWORD {} null", kw),
