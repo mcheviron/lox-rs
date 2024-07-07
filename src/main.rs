@@ -24,8 +24,6 @@ enum Commands {
 enum AppError {
     #[error("Failed to read file: {0}")]
     FileReadError(#[from] std::io::Error),
-    #[error("")]
-    UnexpectedCharacter,
 }
 
 fn main() -> Result<(), AppError> {
@@ -41,20 +39,17 @@ fn main() -> Result<(), AppError> {
                         println!("{}", token);
                     }
                 }
-                Err((error, tokens)) => {
+                Err(tokens) => {
                     for token in tokens {
                         match token {
-                            Lexeme::Error(..) => {
+                            Lexeme::UnexpectedCharError(..)
+                            | Lexeme::UnterminatedStringError(..) => {
                                 eprintln!("{token}")
                             }
                             _ => println!("{token}"),
                         }
                     }
-                    if let AppError::UnexpectedCharacter = error {
-                        process::exit(65);
-                    } else {
-                        return Err(error);
-                    }
+                    process::exit(65);
                 }
             }
         }
@@ -62,7 +57,7 @@ fn main() -> Result<(), AppError> {
 
     Ok(())
 }
-fn tokenize(input: &str) -> Result<Vec<Lexeme>, (AppError, Vec<Lexeme>)> {
+fn tokenize(input: &str) -> Result<Vec<Lexeme>, Vec<Lexeme>> {
     let mut tokens = Vec::new();
     let mut chars = input.chars().peekable();
     let mut line = 1;
@@ -175,18 +170,31 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, (AppError, Vec<Lexeme>)> {
                 }
             }
             '"' => {
+                // Consume the opening quote
                 chars.next();
                 let mut string = String::new();
+                let start_line = line;
+                let mut terminated = false;
+
                 while let Some(&d) = chars.peek() {
                     if d == '"' {
+                        // Consume the closing quote
                         chars.next();
+                        terminated = true;
                         break;
-                    } else {
-                        string.push(d);
-                        chars.next();
+                    } else if d == '\n' {
+                        line += 1;
                     }
+                    string.push(d);
+                    chars.next();
                 }
-                tokens.push(Lexeme::String(string));
+
+                if terminated {
+                    tokens.push(Lexeme::String(string));
+                } else {
+                    tokens.push(Lexeme::UnterminatedStringError(start_line));
+                    has_error = true;
+                }
             }
             '+' => {
                 tokens.push(Lexeme::Operator(MathOp::Plus));
@@ -217,7 +225,7 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, (AppError, Vec<Lexeme>)> {
                 }
             }
             _ => {
-                tokens.push(Lexeme::Error(line, c));
+                tokens.push(Lexeme::UnexpectedCharError(line, c));
                 has_error = true;
                 chars.next();
             }
@@ -227,7 +235,7 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, (AppError, Vec<Lexeme>)> {
     tokens.push(Lexeme::Eof);
 
     if has_error {
-        Err((AppError::UnexpectedCharacter, tokens))
+        Err(tokens)
     } else {
         Ok(tokens)
     }

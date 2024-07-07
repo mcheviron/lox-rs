@@ -40,7 +40,8 @@ pub enum Lexeme {
     LessEqual,
     Greater,
     GreaterEqual,
-    Error(usize, char),
+    UnexpectedCharError(usize, char),
+    UnterminatedStringError(usize),
 }
 
 impl fmt::Display for Lexeme {
@@ -67,8 +68,12 @@ impl fmt::Display for Lexeme {
             Lexeme::LessEqual => write!(f, "LESS_EQUAL <= null"),
             Lexeme::Greater => write!(f, "GREATER > null"),
             Lexeme::GreaterEqual => write!(f, "GREATER_EQUAL >= null"),
-            Lexeme::Error(line, ch) => {
+            // errors
+            Lexeme::UnexpectedCharError(line, ch) => {
                 write!(f, "[line {}] Error: Unexpected character: {}", line, ch)
+            }
+            Lexeme::UnterminatedStringError(line) => {
+                write!(f, "[line {}] Error: Unterminated string.", line)
             }
         }
     }
