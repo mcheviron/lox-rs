@@ -179,8 +179,8 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, Vec<Lexeme>> {
                     }
                 }
                 if [
-                    "and", "class", "else", "false", "for", "fun", "if", "nil", "or",
-                    "print", "return", "super", "this", "true", "var", "while",
+                    "and", "class", "else", "false", "for", "fun", "if", "nil", "or", "print",
+                    "return", "super", "this", "true", "var", "while",
                 ]
                 .contains(&identifier.as_str())
                 {
@@ -229,7 +229,7 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, Vec<Lexeme>> {
                 chars.next();
             }
             '/' => {
-                if let Some('/') = chars.clone().nth(1) {
+                if let Some('/') = chars.peek() {
                     // Skip two characters "//"
                     chars.next();
                     chars.next();
