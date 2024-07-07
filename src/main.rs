@@ -144,11 +144,7 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, Vec<Lexeme>> {
                         number.push(d);
                         chars.next();
                     } else if d == '.' && !has_decimal {
-                        if chars
-                            .clone()
-                            .nth(1)
-                            .map_or(false, |next| next.is_ascii_digit())
-                        {
+                        if chars.peek().map_or(false, |&next| next.is_ascii_digit()) {
                             number.push(d);
                             has_decimal = true;
                             chars.next();
@@ -229,7 +225,7 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, Vec<Lexeme>> {
                 chars.next();
             }
             '/' => {
-                if let Some('/') = chars.peek() {
+                if let Some('/') = chars.clone().nth(1) {
                     // Skip two characters "//"
                     chars.next();
                     chars.next();
