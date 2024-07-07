@@ -21,7 +21,7 @@ impl fmt::Display for MathOp {
 pub enum Lexeme {
     Eof,
     Identifier(String),
-    Number(f64),
+    Number(String, f64),
     String(String),
     Operator(MathOp),
     Keyword(String),
@@ -50,11 +50,11 @@ impl fmt::Display for Lexeme {
         match self {
             Lexeme::Eof => write!(f, "EOF  null"),
             Lexeme::Identifier(s) => write!(f, "IDENTIFIER {} null", s),
-            Lexeme::Number(n) => {
+            Lexeme::Number(original, n) => {
                 if n.fract() == 0.0 {
-                    write!(f, "NUMBER {} {:.1}", n, n)
+                    write!(f, "NUMBER {} {:.1}", original, n)
                 } else {
-                    write!(f, "NUMBER {} {}", n, n)
+                    write!(f, "NUMBER {} {}", original, n)
                 }
             }
             Lexeme::String(s) => write!(f, "STRING \"{}\" {}", s, s),

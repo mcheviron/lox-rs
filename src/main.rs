@@ -160,7 +160,8 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, Vec<Lexeme>> {
                     }
                 }
 
-                tokens.push(Lexeme::Number(number.parse().unwrap()));
+                let n = number.parse().unwrap();
+                tokens.push(Lexeme::Number(number, n));
 
                 if let Some(&'.') = chars.peek() {
                     tokens.push(Lexeme::Dot);
