@@ -37,6 +37,10 @@ pub enum Lexeme {
     EqualEqual,
     Bang,
     BangEqual,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
     Error(usize, char),
 }
 
@@ -61,6 +65,10 @@ impl fmt::Display for Lexeme {
             Lexeme::EqualEqual => write!(f, "EQUAL_EQUAL == null"),
             Lexeme::Bang => write!(f, "BANG ! null"),
             Lexeme::BangEqual => write!(f, "BANG_EQUAL != null"),
+            Lexeme::Less => write!(f, "LESS < null"),
+            Lexeme::LessEqual => write!(f, "LESS_EQUAL <= null"),
+            Lexeme::Greater => write!(f, "GREATER > null"),
+            Lexeme::GreaterEqual => write!(f, "GREATER_EQUAL >= null"),
             Lexeme::Error(line, ch) => write!(f, "[line {}] Error: Unexpected character: {}", line, ch),
         }
     }

@@ -123,6 +123,24 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, (AppError, Vec<Lexeme>)> {
                     tokens.push(Lexeme::Bang);
                 }
             }
+            '<' => {
+                chars.next();
+                if let Some(&'=') = chars.peek() {
+                    tokens.push(Lexeme::LessEqual);
+                    chars.next();
+                } else {
+                    tokens.push(Lexeme::Less);
+                }
+            }
+            '>' => {
+                chars.next();
+                if let Some(&'=') = chars.peek() {
+                    tokens.push(Lexeme::GreaterEqual);
+                    chars.next();
+                } else {
+                    tokens.push(Lexeme::Greater);
+                }
+            }
             '0'..='9' => {
                 let mut number = String::new();
                 while let Some(&d) = chars.peek() {
