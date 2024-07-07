@@ -202,18 +202,15 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, (AppError, Vec<Lexeme>)> {
             }
             '/' => {
                 if let Some('/') = chars.clone().nth(1) {
+                    // Skip two characters "//"
                     chars.next();
                     chars.next();
-                    let mut comment = String::new();
                     while let Some(&d) = chars.peek() {
                         if d == '\n' {
                             break;
-                        } else {
-                            comment.push(d);
-                            chars.next();
                         }
+                        chars.next();
                     }
-                    tokens.push(Lexeme::Comment(comment));
                 } else {
                     tokens.push(Lexeme::Operator(MathOp::Slash));
                     chars.next();

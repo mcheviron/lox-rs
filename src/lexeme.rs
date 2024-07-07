@@ -25,7 +25,6 @@ pub enum Lexeme {
     String(String),
     Operator(MathOp),
     Keyword(String),
-    Comment(String),
     LeftParen,
     RightParen,
     LeftBrace,
@@ -53,7 +52,6 @@ impl fmt::Display for Lexeme {
             Lexeme::String(s) => write!(f, "STRING \"{}\" {}", s, s),
             Lexeme::Operator(op) => write!(f, "{} null", op),
             Lexeme::Keyword(kw) => write!(f, "KEYWORD {} null", kw),
-            Lexeme::Comment(c) => write!(f, "COMMENT {} null", c),
             Lexeme::LeftParen => write!(f, "LEFT_PAREN ( null"),
             Lexeme::RightParen => write!(f, "RIGHT_PAREN ) null"),
             Lexeme::LeftBrace => write!(f, "LEFT_BRACE {{ null"),
@@ -69,7 +67,9 @@ impl fmt::Display for Lexeme {
             Lexeme::LessEqual => write!(f, "LESS_EQUAL <= null"),
             Lexeme::Greater => write!(f, "GREATER > null"),
             Lexeme::GreaterEqual => write!(f, "GREATER_EQUAL >= null"),
-            Lexeme::Error(line, ch) => write!(f, "[line {}] Error: Unexpected character: {}", line, ch),
+            Lexeme::Error(line, ch) => {
+                write!(f, "[line {}] Error: Unexpected character: {}", line, ch)
+            }
         }
     }
 }
