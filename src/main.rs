@@ -179,8 +179,8 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, Vec<Lexeme>> {
                     }
                 }
                 if [
-                    "and", "class", "else", "false", "for", "fun", "if", "let", "nil", "or",
-                    "return", "super", "this", "true", "var", "while",
+                    "and", "class", "else", "false", "for", "fun", "if", "nil", "or",
+                    "print", "return", "super", "this", "true", "var", "while",
                 ]
                 .contains(&identifier.as_str())
                 {

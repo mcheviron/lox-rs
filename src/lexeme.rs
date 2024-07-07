@@ -59,7 +59,7 @@ impl fmt::Display for Lexeme {
             }
             Lexeme::String(s) => write!(f, "STRING \"{}\" {}", s, s),
             Lexeme::Operator(op) => write!(f, "{} null", op),
-            Lexeme::Keyword(kw) => write!(f, "KEYWORD {} null", kw),
+            Lexeme::Keyword(kw) => write!(f, "{} {} null", kw.to_uppercase(), kw),
             Lexeme::LeftParen => write!(f, "LEFT_PAREN ( null"),
             Lexeme::RightParen => write!(f, "RIGHT_PAREN ) null"),
             Lexeme::LeftBrace => write!(f, "LEFT_BRACE {{ null"),
