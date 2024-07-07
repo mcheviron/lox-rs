@@ -33,6 +33,8 @@ pub enum Lexeme {
     Comma,
     Dot,
     Semicolon,
+    Equal,
+    EqualEqual,
     Error(usize, char),
 }
 
@@ -53,6 +55,8 @@ impl fmt::Display for Lexeme {
             Lexeme::Comma => write!(f, "COMMA , null"),
             Lexeme::Dot => write!(f, "DOT . null"),
             Lexeme::Semicolon => write!(f, "SEMICOLON ; null"),
+            Lexeme::Equal => write!(f, "EQUAL = null"),
+            Lexeme::EqualEqual => write!(f, "EQUAL_EQUAL == null"),
             Lexeme::Error(line, ch) => write!(f, "[line {}] Error: Unexpected character: {}", line, ch),
         }
     }

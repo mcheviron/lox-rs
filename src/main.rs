@@ -15,7 +15,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Tokenize {
-        #[arg(value_name = "FILE")]
+        #[arg(value_name = "FILE", help = "Path to the source file")]
         file: PathBuf,
     },
 }
@@ -33,8 +33,6 @@ fn main() -> Result<(), AppError> {
 
     match &cli.command {
         Commands::Tokenize { file } => {
-            eprintln!("Tokenizing file: {:?}", file);
-
             let file_contents = fs::read_to_string(file).map_err(AppError::FileReadError)?;
 
             match tokenize(&file_contents) {
@@ -106,6 +104,15 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, (AppError, Vec<Lexeme>)> {
             ';' => {
                 tokens.push(Lexeme::Semicolon);
                 chars.next();
+            }
+            '=' => {
+                chars.next();
+                if let Some(&'=') = chars.peek() {
+                    tokens.push(Lexeme::EqualEqual);
+                    chars.next();
+                } else {
+                    tokens.push(Lexeme::Equal);
+                }
             }
             '0'..='9' => {
                 let mut number = String::new();
