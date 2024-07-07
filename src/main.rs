@@ -114,6 +114,15 @@ fn tokenize(input: &str) -> Result<Vec<Lexeme>, (AppError, Vec<Lexeme>)> {
                     tokens.push(Lexeme::Equal);
                 }
             }
+            '!' => {
+                chars.next();
+                if let Some(&'=') = chars.peek() {
+                    tokens.push(Lexeme::BangEqual);
+                    chars.next();
+                } else {
+                    tokens.push(Lexeme::Bang);
+                }
+            }
             '0'..='9' => {
                 let mut number = String::new();
                 while let Some(&d) = chars.peek() {

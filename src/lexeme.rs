@@ -35,6 +35,8 @@ pub enum Lexeme {
     Semicolon,
     Equal,
     EqualEqual,
+    Bang,
+    BangEqual,
     Error(usize, char),
 }
 
@@ -57,6 +59,8 @@ impl fmt::Display for Lexeme {
             Lexeme::Semicolon => write!(f, "SEMICOLON ; null"),
             Lexeme::Equal => write!(f, "EQUAL = null"),
             Lexeme::EqualEqual => write!(f, "EQUAL_EQUAL == null"),
+            Lexeme::Bang => write!(f, "BANG ! null"),
+            Lexeme::BangEqual => write!(f, "BANG_EQUAL != null"),
             Lexeme::Error(line, ch) => write!(f, "[line {}] Error: Unexpected character: {}", line, ch),
         }
     }
