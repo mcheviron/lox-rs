@@ -40,6 +40,7 @@ pub enum Lexeme {
     LessEqual,
     Greater,
     GreaterEqual,
+    // errors
     UnexpectedCharError(usize, char),
     UnterminatedStringError(usize),
 }
