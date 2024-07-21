@@ -39,6 +39,7 @@ impl<'a> Parser<'a> {
                     Ok(n.to_string())
                 }
             }
+            Lexeme::String(s) => Ok(s.to_string()),
             _ => Ok("unknown".to_string()),
         }
     }
