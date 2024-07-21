@@ -4,9 +4,11 @@ use clap::{Parser, Subcommand};
 use thiserror::Error;
 
 mod lexeme;
+mod parser;
 mod tokenizer;
 
 use lexeme::Lexeme;
+use parser::{Parser as LoxParser, ParserError};
 use tokenizer::Tokenizer;
 
 #[derive(Parser)]
@@ -31,7 +33,11 @@ enum Commands {
 #[derive(Error, Debug)]
 enum AppError {
     #[error("Failed to read file: {0}")]
-    FileReadError(#[from] std::io::Error),
+    FileRead(#[from] std::io::Error),
+    #[error("Tokenization error")]
+    Tokenization,
+    #[error("Parsing error: {0}")]
+    Parsing(#[from] ParserError),
 }
 
 fn main() -> Result<(), AppError> {
@@ -46,7 +52,7 @@ fn main() -> Result<(), AppError> {
 }
 
 fn tokenize_file(file: &PathBuf) -> Result<(), AppError> {
-    let file_contents = fs::read_to_string(file).map_err(AppError::FileReadError)?;
+    let file_contents = fs::read_to_string(file).map_err(AppError::FileRead)?;
     let mut tokenizer = Tokenizer::new(&file_contents);
 
     match tokenizer.tokenize() {
@@ -78,16 +84,18 @@ fn print_tokens_with_errors(tokens: &[Lexeme]) {
 }
 
 fn parse_file(file: &PathBuf) -> Result<(), AppError> {
-    let file_contents = fs::read_to_string(file).map_err(AppError::FileReadError)?;
-    let trimmed_contents = file_contents.trim();
+    let file_contents = fs::read_to_string(file).map_err(AppError::FileRead)?;
+    let mut tokenizer = Tokenizer::new(&file_contents);
 
-    let result = match trimmed_contents {
-        "true" => "true",
-        "false" => "false",
-        "nil" => "nil",
-        _ => "Unexpected input",
-    };
+    let tokens = tokenizer
+        .tokenize()
+        .map_err(|_| AppError::Tokenization)?;
+    let mut parser = LoxParser::new(tokens);
 
-    println!("{}", result);
+    match parser.parse() {
+        Ok(result) => println!("{}", result),
+        Err(err) => return Err(AppError::Parsing(err)),
+    }
+
     Ok(())
 }

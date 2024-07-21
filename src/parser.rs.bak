@@ -1,0 +1,239 @@
+
+use thiserror::Error;
+
+use crate::lexeme::{Lexeme, MathOp};
+
+#[derive(Error, Debug)]
+pub enum ParserError {
+    #[error("Expected {expected}, got {got:?}")]
+    Token { expected: String, got: Lexeme },
+    #[error("Expected expression, got {0:?}")]
+    Expression(Lexeme),
+    #[error("Expected variable name, got {0:?}")]
+    VariableName(Lexeme),
+}
+
+pub struct Parser<'a> {
+    tokens: &'a [Lexeme],
+    current: usize,
+}
+
+impl<'a> Parser<'a> {
+    pub fn new(tokens: &'a [Lexeme]) -> Self {
+        Parser { tokens, current: 0 }
+    }
+
+    pub fn parse(&mut self) -> Result<String, ParserError> {
+        let mut output = String::new();
+        while !self.is_at_end() {
+            match self.declaration() {
+                Ok(stmt) => output.push_str(&format!("{}\n", stmt)),
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(output)
+    }
+
+    fn declaration(&mut self) -> Result<String, ParserError> {
+        match self.peek() {
+            Lexeme::Keyword(s) if s == "var" => {
+                self.advance();
+                self.var_declaration()
+            }
+            _ => self.statement(),
+        }
+    }
+
+    fn var_declaration(&mut self) -> Result<String, ParserError> {
+        let name = self.consume_identifier()?;
+
+        let initializer = match self.peek() {
+            Lexeme::Equal => {
+                self.advance();
+                Some(self.expression()?)
+            }
+            _ => None,
+        };
+
+        self.consume(&Lexeme::Semicolon, "Expect ';' after variable declaration.")?;
+        Ok(format!("var {} = {:?};", name, initializer))
+    }
+
+    fn statement(&mut self) -> Result<String, ParserError> {
+        match self.peek() {
+            Lexeme::Keyword(s) if s == "print" => {
+                self.advance();
+                self.print_statement()
+            }
+            _ => self.expression_statement(),
+        }
+    }
+
+    fn print_statement(&mut self) -> Result<String, ParserError> {
+        let value = self.expression()?;
+        self.consume(&Lexeme::Semicolon, "Expect ';' after value.")?;
+        Ok(format!("print {};", value))
+    }
+
+    fn expression_statement(&mut self) -> Result<String, ParserError> {
+        let expr = self.expression()?;
+        self.consume(&Lexeme::Semicolon, "Expect ';' after expression.")?;
+        Ok(expr)
+    }
+
+    fn expression(&mut self) -> Result<String, ParserError> {
+        self.equality()
+    }
+
+    fn equality(&mut self) -> Result<String, ParserError> {
+        let mut expr = self.comparison()?;
+
+        while let Lexeme::BangEqual | Lexeme::EqualEqual = self.peek() {
+            let operator = self.advance().clone();
+            let right = self.comparison()?;
+            expr = format!("({} {} {})", expr, operator, right);
+        }
+
+        Ok(expr)
+    }
+
+    fn comparison(&mut self) -> Result<String, ParserError> {
+        let mut expr = self.term()?;
+
+        while matches!(
+            self.peek(),
+            Lexeme::Greater | Lexeme::GreaterEqual | Lexeme::Less | Lexeme::LessEqual
+        ) {
+            let operator = self.advance().clone();
+            let right = self.term()?;
+            expr = format!("({} {} {})", expr, operator, right);
+        }
+
+        Ok(expr)
+    }
+
+    fn term(&mut self) -> Result<String, ParserError> {
+        let mut expr = self.factor()?;
+
+        while matches!(
+            self.peek(),
+            Lexeme::Operator(MathOp::Plus) | Lexeme::Operator(MathOp::Minus)
+        ) {
+            let operator = self.advance().clone();
+            let right = self.factor()?;
+            expr = format!("({} {} {})", expr, operator, right);
+        }
+
+        Ok(expr)
+    }
+
+    fn factor(&mut self) -> Result<String, ParserError> {
+        let mut expr = self.unary()?;
+
+        while matches!(
+            self.peek(),
+            Lexeme::Operator(MathOp::Star) | Lexeme::Operator(MathOp::Slash)
+        ) {
+            let operator = self.advance().clone();
+            let right = self.unary()?;
+            expr = format!("({} {} {})", expr, operator, right);
+        }
+
+        Ok(expr)
+    }
+
+    fn unary(&mut self) -> Result<String, ParserError> {
+        match self.peek() {
+            Lexeme::Bang | Lexeme::Operator(MathOp::Minus) => {
+                let operator = self.advance().clone();
+                let right = self.unary()?;
+                Ok(format!("({} {})", operator, right))
+            }
+            _ => self.primary(),
+        }
+    }
+
+    fn primary(&mut self) -> Result<String, ParserError> {
+        match self.peek().clone() {
+            Lexeme::Keyword(s) if s == "false" => {
+                self.advance();
+                Ok("false".to_string())
+            }
+            Lexeme::Keyword(s) if s == "true" => {
+                self.advance();
+                Ok("true".to_string())
+            }
+            Lexeme::Keyword(s) if s == "nil" => {
+                self.advance();
+                Ok("nil".to_string())
+            }
+            Lexeme::Number(_, n) => {
+                self.advance();
+                Ok(n.to_string())
+            }
+            Lexeme::String(s) => {
+                self.advance();
+                Ok(format!("\"{}\"", s))
+            }
+            Lexeme::LeftParen => {
+                self.advance();
+                let expr = self.expression()?;
+                self.consume(&Lexeme::RightParen, "Expect ')' after expression.")?;
+                Ok(format!("({})", expr))
+            }
+            Lexeme::Identifier(name) => {
+                self.advance();
+                Ok(name)
+            }
+            _ => Err(ParserError::Expression(self.peek().clone())),
+        }
+    }
+
+    fn consume(&mut self, t: &Lexeme, message: &str) -> Result<&Lexeme, ParserError> {
+        if self.check(t) {
+            Ok(self.advance())
+        } else {
+            Err(ParserError::Token {
+                expected: message.to_string(),
+                got: self.peek().clone(),
+            })
+        }
+    }
+
+    fn consume_identifier(&mut self) -> Result<String, ParserError> {
+        match self.peek().clone() {
+            Lexeme::Identifier(name) => {
+                self.advance();
+                Ok(name)
+            }
+            _ => Err(ParserError::VariableName(self.peek().clone())),
+        }
+    }
+
+    fn check(&self, t: &Lexeme) -> bool {
+        if self.is_at_end() {
+            false
+        } else {
+            std::mem::discriminant(self.peek()) == std::mem::discriminant(t)
+        }
+    }
+
+    fn advance(&mut self) -> &Lexeme {
+        if !self.is_at_end() {
+            self.current += 1;
+        }
+        self.previous()
+    }
+
+    fn is_at_end(&self) -> bool {
+        self.peek() == &Lexeme::Eof
+    }
+
+    fn peek(&self) -> &Lexeme {
+        &self.tokens[self.current]
+    }
+
+    fn previous(&self) -> &Lexeme {
+        &self.tokens[self.current - 1]
+    }
+}
