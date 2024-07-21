@@ -1,12 +1,19 @@
-use thiserror::Error;
-
 use crate::lexeme::Lexeme;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ParserError {
     #[error("Unexpected token: {0:?}")]
     UnexpectedToken(Lexeme),
+    #[error("Unmatched parentheses")]
+    UnmatchedParentheses,
+    #[error("Expected token: {0:?}")]
+    ExpectedToken(Lexeme),
+    #[error("Empty grouping")]
+    EmptyGrouping,
 }
+
+pub type Result<T> = std::result::Result<T, ParserError>;
 
 pub struct Parser<'a> {
     tokens: &'a [Lexeme],
@@ -18,29 +25,72 @@ impl<'a> Parser<'a> {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<String, ParserError> {
+    pub fn parse(&mut self) -> Result<String> {
         let mut output = String::new();
         while !self.is_at_end() {
-            output.push_str(&self.parse_token()?);
+            output.push_str(&self.parse_expression()?);
             output.push('\n');
         }
         Ok(output)
     }
 
-    fn parse_token(&mut self) -> Result<String, ParserError> {
-        match self.advance() {
-            Lexeme::Keyword(s) if s == "true" => Ok("true".to_string()),
-            Lexeme::Keyword(s) if s == "false" => Ok("false".to_string()),
-            Lexeme::Keyword(s) if s == "nil" => Ok("nil".to_string()),
-            Lexeme::Number(_, n) => {
-                if n.fract() == 0.0 {
-                    Ok(format!("{:.1}", n))
-                } else {
-                    Ok(n.to_string())
+    fn parse_expression(&mut self) -> Result<String> {
+        self.parse_grouping()
+    }
+
+    fn parse_grouping(&mut self) -> Result<String> {
+        match self.peek() {
+            Lexeme::LeftParen => {
+                self.advance();
+                let expressions = self.parse_comma_separated_expressions()?;
+                if expressions.is_empty() {
+                    return Err(ParserError::EmptyGrouping);
                 }
+                self.consume(Lexeme::RightParen)?;
+                Ok(format!("(group {})", expressions.join(", ")))
             }
+            _ => self.parse_token(),
+        }
+    }
+
+    fn parse_comma_separated_expressions(&mut self) -> Result<Vec<String>> {
+        let expressions = std::iter::from_fn(|| match self.peek() {
+            Lexeme::RightParen => None,
+            Lexeme::Eof => Some(Err(ParserError::UnmatchedParentheses)),
+            _ => {
+                let expr = self.parse_expression();
+                if self.peek() == &Lexeme::Comma {
+                    self.advance();
+                }
+                Some(expr)
+            }
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+        Ok(expressions)
+    }
+
+    fn parse_token(&mut self) -> Result<String> {
+        match self.advance() {
+            Lexeme::Keyword(s) => Ok(match s.as_str() {
+                "true" | "false" | "nil" => s.to_string(),
+                _ => "unknown".to_string(),
+            }),
+            Lexeme::Number(_, n) => Ok(if n.fract() == 0.0 {
+                format!("{:.1}", n)
+            } else {
+                n.to_string()
+            }),
             Lexeme::String(s) => Ok(s.to_string()),
             _ => Ok("unknown".to_string()),
+        }
+    }
+
+    fn consume(&mut self, expected: Lexeme) -> Result<&Lexeme> {
+        match self.peek() {
+            lexeme if lexeme == &expected => Ok(self.advance()),
+            Lexeme::Eof => Err(ParserError::UnmatchedParentheses),
+            _ => Err(ParserError::ExpectedToken(expected)),
         }
     }
 
@@ -52,7 +102,7 @@ impl<'a> Parser<'a> {
     }
 
     fn is_at_end(&self) -> bool {
-        self.peek() == &Lexeme::Eof
+        matches!(self.peek(), Lexeme::Eof)
     }
 
     fn peek(&self) -> &Lexeme {

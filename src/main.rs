@@ -94,7 +94,10 @@ fn parse_file(file: &PathBuf) -> Result<(), AppError> {
 
     match parser.parse() {
         Ok(result) => println!("{}", result),
-        Err(err) => return Err(AppError::Parsing(err)),
+        Err(err) => {
+            eprintln!("Error: {}", err);
+            process::exit(65);
+        }
     }
 
     Ok(())
