@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[derive(Copy, Clone)]
 pub enum MathOp {
     Plus,
     Minus,
@@ -18,6 +19,7 @@ impl fmt::Display for MathOp {
     }
 }
 
+#[derive(Clone)]
 pub enum Lexeme {
     Eof,
     Identifier(String),
