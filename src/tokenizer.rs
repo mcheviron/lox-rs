@@ -150,15 +150,15 @@ impl<'a> Tokenizer<'a> {
                 break;
             }
         }
-        if [
-            "and", "class", "else", "false", "for", "fun", "if", "let", "nil", "or", "return",
-            "super", "this", "true", "var", "while",
-        ]
-        .contains(&identifier.as_str())
-        {
-            self.tokens.push(Lexeme::Keyword(identifier));
-        } else {
-            self.tokens.push(Lexeme::Identifier(identifier));
+
+        match identifier.as_str() {
+            "and" | "class" | "else" | "false" | "for" | "fun" | "if" | "let" | "nil" | "or"
+            | "return" | "super" | "this" | "true" | "var" | "while" | "print" => {
+                self.tokens.push(Lexeme::Keyword(identifier));
+            }
+            _ => {
+                self.tokens.push(Lexeme::Identifier(identifier));
+            }
         }
     }
 

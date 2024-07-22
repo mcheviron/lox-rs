@@ -1,4 +1,4 @@
-use crate::lexeme::Lexeme;
+use crate::lexeme::{Lexeme, MathOp};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -35,7 +35,18 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self) -> Result<String> {
-        self.parse_grouping()
+        match self.peek() {
+            Lexeme::Bang | Lexeme::Operator(MathOp::Minus) => {
+                let operator = self.advance().clone();
+                let right = self.parse_expression()?;
+                Ok(match operator {
+                    Lexeme::Bang => format!("(! {})", right),
+                    Lexeme::Operator(MathOp::Minus) => format!("(- {})", right),
+                    _ => unreachable!(),
+                })
+            }
+            _ => self.parse_grouping(),
+        }
     }
 
     fn parse_grouping(&mut self) -> Result<String> {
@@ -82,7 +93,7 @@ impl<'a> Parser<'a> {
                 n.to_string()
             }),
             Lexeme::String(s) => Ok(s.to_string()),
-            _ => Ok("unknown".to_string()),
+            unexpected => Err(ParserError::UnexpectedToken(unexpected.clone())),
         }
     }
 
