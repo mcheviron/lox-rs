@@ -108,24 +108,26 @@ impl<'a> Tokenizer<'a> {
         let mut number = String::new();
         let mut has_decimal = false;
         while let Some(&d) = self.chars.peek() {
-            if d.is_ascii_digit() {
-                number.push(d);
-                self.chars.next();
-            } else if d == '.' && !has_decimal {
-                if self
-                    .chars
-                    .clone()
-                    .nth(1)
-                    .map_or(false, |next| next.is_ascii_digit())
-                {
+            match d {
+                '0'..='9' => {
                     number.push(d);
-                    has_decimal = true;
                     self.chars.next();
-                } else {
-                    break;
                 }
-            } else {
-                break;
+                '.' if !has_decimal => {
+                    if self
+                        .chars
+                        .clone()
+                        .nth(1)
+                        .map_or(false, |next| next.is_ascii_digit())
+                    {
+                        number.push(d);
+                        has_decimal = true;
+                        self.chars.next();
+                    } else {
+                        break;
+                    }
+                }
+                _ => break,
             }
         }
 
