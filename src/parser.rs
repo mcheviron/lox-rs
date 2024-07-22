@@ -11,6 +11,8 @@ pub enum ParserError {
     ExpectedToken(Lexeme),
     #[error("Empty grouping")]
     EmptyGrouping,
+    #[error("Invalid unary operator: {0:?}")]
+    InvalidUnaryOperator(Lexeme),
 }
 
 pub type Result<T> = std::result::Result<T, ParserError>;
@@ -39,29 +41,25 @@ impl<'a> Parser<'a> {
             Lexeme::Bang | Lexeme::Operator(MathOp::Minus) => {
                 let operator = self.advance().clone();
                 let right = self.parse_expression()?;
-                Ok(match operator {
-                    Lexeme::Bang => format!("(! {})", right),
-                    Lexeme::Operator(MathOp::Minus) => format!("(- {})", right),
-                    _ => unreachable!(),
-                })
+                match operator {
+                    Lexeme::Bang => Ok(format!("(! {})", right)),
+                    Lexeme::Operator(MathOp::Minus) => Ok(format!("(- {})", right)),
+                    _ => Err(ParserError::InvalidUnaryOperator(operator)),
+                }
             }
-            _ => self.parse_grouping(),
+            Lexeme::LeftParen => self.parse_grouping(),
+            _ => self.parse_token(),
         }
     }
 
     fn parse_grouping(&mut self) -> Result<String> {
-        match self.peek() {
-            Lexeme::LeftParen => {
-                self.advance();
-                let expressions = self.parse_comma_separated_expressions()?;
-                if expressions.is_empty() {
-                    return Err(ParserError::EmptyGrouping);
-                }
-                self.consume(Lexeme::RightParen)?;
-                Ok(format!("(group {})", expressions.join(", ")))
-            }
-            _ => self.parse_token(),
+        self.advance();
+        let expressions = self.parse_comma_separated_expressions()?;
+        if expressions.is_empty() {
+            return Err(ParserError::EmptyGrouping);
         }
+        self.consume(Lexeme::RightParen)?;
+        Ok(format!("(group {})", expressions.join(", ")))
     }
 
     fn parse_comma_separated_expressions(&mut self) -> Result<Vec<String>> {
