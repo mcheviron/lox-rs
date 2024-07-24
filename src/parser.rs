@@ -37,6 +37,25 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self) -> Result<String> {
+        let mut expr = self.parse_term()?;
+
+        while matches!(
+            self.peek(),
+            Lexeme::Operator(MathOp::Plus) | Lexeme::Operator(MathOp::Minus)
+        ) {
+            let operator = self.advance().clone();
+            let right = self.parse_term()?;
+            expr = match operator {
+                Lexeme::Operator(MathOp::Plus) => format!("(+ {} {})", expr, right),
+                Lexeme::Operator(MathOp::Minus) => format!("(- {} {})", expr, right),
+                _ => unreachable!(),
+            };
+        }
+
+        Ok(expr)
+    }
+
+    fn parse_term(&mut self) -> Result<String> {
         let mut expr = self.parse_unary()?;
 
         while matches!(
