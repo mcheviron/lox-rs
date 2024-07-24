@@ -37,7 +37,23 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self) -> Result<String> {
-        self.parse_comparison()
+        self.parse_equality()
+    }
+
+    fn parse_equality(&mut self) -> Result<String> {
+        let mut expr = self.parse_comparison()?;
+
+        while matches!(self.peek(), Lexeme::EqualEqual | Lexeme::BangEqual) {
+            let operator = self.advance().clone();
+            let right = self.parse_comparison()?;
+            expr = match operator {
+                Lexeme::EqualEqual => format!("(== {} {})", expr, right),
+                Lexeme::BangEqual => format!("(!= {} {})", expr, right),
+                _ => unreachable!(),
+            };
+        }
+
+        Ok(expr)
     }
 
     fn parse_comparison(&mut self) -> Result<String> {
