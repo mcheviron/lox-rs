@@ -37,14 +37,39 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self) -> Result<String> {
+        self.parse_comparison()
+    }
+
+    fn parse_comparison(&mut self) -> Result<String> {
         let mut expr = self.parse_term()?;
+
+        while matches!(
+            self.peek(),
+            Lexeme::Greater | Lexeme::Less | Lexeme::GreaterEqual | Lexeme::LessEqual
+        ) {
+            let operator = self.advance().clone();
+            let right = self.parse_term()?;
+            expr = match operator {
+                Lexeme::Greater => format!("(> {} {})", expr, right),
+                Lexeme::Less => format!("(< {} {})", expr, right),
+                Lexeme::GreaterEqual => format!("(>= {} {})", expr, right),
+                Lexeme::LessEqual => format!("(<= {} {})", expr, right),
+                _ => unreachable!(),
+            };
+        }
+
+        Ok(expr)
+    }
+
+    fn parse_term(&mut self) -> Result<String> {
+        let mut expr = self.parse_factor()?;
 
         while matches!(
             self.peek(),
             Lexeme::Operator(MathOp::Plus) | Lexeme::Operator(MathOp::Minus)
         ) {
             let operator = self.advance().clone();
-            let right = self.parse_term()?;
+            let right = self.parse_factor()?;
             expr = match operator {
                 Lexeme::Operator(MathOp::Plus) => format!("(+ {} {})", expr, right),
                 Lexeme::Operator(MathOp::Minus) => format!("(- {} {})", expr, right),
@@ -55,7 +80,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn parse_term(&mut self) -> Result<String> {
+    fn parse_factor(&mut self) -> Result<String> {
         let mut expr = self.parse_unary()?;
 
         while matches!(
