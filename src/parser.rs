@@ -37,10 +37,29 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self) -> Result<String> {
+        let mut expr = self.parse_unary()?;
+
+        while matches!(
+            self.peek(),
+            Lexeme::Operator(MathOp::Star) | Lexeme::Operator(MathOp::Slash)
+        ) {
+            let operator = self.advance().clone();
+            let right = self.parse_unary()?;
+            expr = match operator {
+                Lexeme::Operator(MathOp::Star) => format!("(* {} {})", expr, right),
+                Lexeme::Operator(MathOp::Slash) => format!("(/ {} {})", expr, right),
+                _ => unreachable!(),
+            };
+        }
+
+        Ok(expr)
+    }
+
+    fn parse_unary(&mut self) -> Result<String> {
         match self.peek() {
             Lexeme::Bang | Lexeme::Operator(MathOp::Minus) => {
                 let operator = self.advance().clone();
-                let right = self.parse_expression()?;
+                let right = self.parse_unary()?;
                 match operator {
                     Lexeme::Bang => Ok(format!("(! {})", right)),
                     Lexeme::Operator(MathOp::Minus) => Ok(format!("(- {})", right)),
@@ -48,13 +67,13 @@ impl<'a> Parser<'a> {
                 }
             }
             Lexeme::LeftParen => self.parse_grouping(),
-            _ => self.parse_token(),
+            _ => self.parse_literal(),
         }
     }
 
     fn parse_grouping(&mut self) -> Result<String> {
         self.advance();
-        let expressions = self.parse_comma_separated_expressions()?;
+        let expressions = self.parse_grouped_expressions()?;
         if expressions.is_empty() {
             return Err(ParserError::EmptyGrouping);
         }
@@ -62,24 +81,27 @@ impl<'a> Parser<'a> {
         Ok(format!("(group {})", expressions.join(", ")))
     }
 
-    fn parse_comma_separated_expressions(&mut self) -> Result<Vec<String>> {
-        let expressions = std::iter::from_fn(|| match self.peek() {
-            Lexeme::RightParen => None,
-            Lexeme::Eof => Some(Err(ParserError::UnmatchedParentheses)),
-            _ => {
-                let expr = self.parse_expression();
-                if self.peek() == &Lexeme::Comma {
-                    self.advance();
+    fn parse_grouped_expressions(&mut self) -> Result<Vec<String>> {
+        let mut expressions = Vec::new();
+
+        loop {
+            match self.peek() {
+                Lexeme::RightParen => break,
+                Lexeme::Eof => return Err(ParserError::UnmatchedParentheses),
+                _ => {
+                    expressions.push(self.parse_expression()?);
+                    if self.peek() != &Lexeme::Comma {
+                        break;
+                    }
+                    self.advance(); // consume the comma to avoid trailing comma
                 }
-                Some(expr)
             }
-        })
-        .collect::<Result<Vec<_>>>()?;
+        }
 
         Ok(expressions)
     }
 
-    fn parse_token(&mut self) -> Result<String> {
+    fn parse_literal(&mut self) -> Result<String> {
         match self.advance() {
             Lexeme::Keyword(s) => Ok(match s.as_str() {
                 "true" | "false" | "nil" => s.to_string(),
